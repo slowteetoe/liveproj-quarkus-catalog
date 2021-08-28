@@ -21,7 +21,7 @@ public class TvShow {
 	TvShow() {
 	}
 
-	TvShow(Long id, String title, String category) {
+	public TvShow(Long id, String title, String category) {
 		this.id = id;
 		this.title = title;
 		this.category = category;
