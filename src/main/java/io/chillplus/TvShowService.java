@@ -1,40 +1,30 @@
 package io.chillplus;
 
 import io.chillplus.api.TvShow;
-
-import javax.enterprise.context.ApplicationScoped;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicLong;
+import javax.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
 public class TvShowService {
 
-	private static final AtomicLong SEQ = new AtomicLong();
+  public List<TvShow> getAll() {
+    return TvShow.listAll();
+  }
 
-	private final Map<Long, TvShow> data = new TreeMap<>();
+  public TvShow findById(Long id) {
+    return TvShow.findById(id);
+  }
 
-	public List<TvShow> getAll() {
-		return new ArrayList<>(data.values());
-	}
+  public TvShow create(TvShow tvShow) {
+    tvShow.persistAndFlush();
+    return tvShow;
+  }
 
-	public TvShow findById(Long id) {
-		return data.get(id);
-	}
+  public void deleteAll() {
+    TvShow.deleteAll();
+  }
 
-	public TvShow create(TvShow tvShow) {
-		tvShow.setId(SEQ.incrementAndGet());
-		data.put(tvShow.getId(), tvShow);
-		return tvShow;
-	}
-
-	public void deleteAll() {
-		data.clear();
-	}
-
-	public void deleteById(Long id) {
-		data.remove(id);
-	}
+  public void deleteById(Long id) {
+    TvShow.deleteById(id);
+  }
 }
