@@ -4,37 +4,64 @@ import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.verify;
 
 import io.chillplus.api.TvShow;
 import io.quarkus.test.common.http.TestHTTPEndpoint;
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.junit.mockito.InjectMock;
 import io.restassured.http.ContentType;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 
 @QuarkusTest
 @TestHTTPEndpoint(TvShowResource.class) // this sets the RestAssured base path, neat.
 public class TvShowResourceTest {
 
-  @InjectMock
-  TvShowService tvShowService;
+  // clear out data each time
+  @BeforeEach
+  public void beforeEach() {
+    given()
+        .when()
+        .delete("")
+        .then()
+        .statusCode(204);
+  }
 
   @Test
   public void shouldListShows() {
-    Mockito.when(tvShowService.getAll())
-        .thenReturn(
-            Arrays.asList(
-                new TvShow(123L, "This is a show", null),
-                new TvShow(456L, "A different kind of show", null)));
+    given()
+        .when()
+        .get("")
+        .then()
+        .statusCode(200)
+        .contentType(ContentType.JSON)
+        .body("$.size()", is(0));
+
+    TvShow tvShow = new TvShow(null, "This is a show", "Comedy");
+
+    given()
+        .body(tvShow)
+        .contentType(ContentType.JSON)
+        .accept(ContentType.JSON)
+        .when()
+        .post("")
+        .then()
+        .statusCode(200)
+        .contentType(ContentType.JSON)
+        .body("title", is(tvShow.getTitle()));
+
+    tvShow = new TvShow(null, "A different kind of show", "Drama");
+
+    given()
+        .body(tvShow)
+        .contentType(ContentType.JSON)
+        .accept(ContentType.JSON)
+        .when()
+        .post("")
+        .then()
+        .statusCode(200)
+        .contentType(ContentType.JSON)
+        .body("title", is(tvShow.getTitle()));
 
     List<TvShow> actual = given()
         .when().get()
@@ -49,7 +76,6 @@ public class TvShowResourceTest {
 
   @Test
   public void shouldReturnEmptyListWhenNoShowsExist() {
-    Mockito.when(tvShowService.getAll()).thenReturn(Collections.emptyList());
     given()
         .when().get()
         .then()
@@ -59,15 +85,27 @@ public class TvShowResourceTest {
 
   @Test
   public void shouldRetrieveTvShow() {
-    Mockito.when(tvShowService.findById(98765L)).thenReturn(
-        new TvShow(98765L, "A great show", null));
+    TvShow tvShow = new TvShow(null, "This is a show", "Comedy");
+
+    TvShow actual = given()
+        .body(tvShow)
+        .contentType(ContentType.JSON)
+        .accept(ContentType.JSON)
+        .when()
+        .post()
+        .then()
+        .statusCode(200)
+        .contentType(ContentType.JSON)
+        .extract().body().as(TvShow.class);
+
+    assertThat(actual.getId()).isNotNull();
 
     given().contentType(ContentType.JSON)
         .when()
-        .get("98765")
+        .get("" + actual.getId())
         .then()
         .statusCode(200)
-        .body("title", is("A great show"));
+        .body("title", is(actual.getTitle()));
   }
 
   @Test
@@ -77,25 +115,6 @@ public class TvShowResourceTest {
         .get("123456789") // this show does not exist
         .then()
         .statusCode(404);
-  }
-
-  @Test
-  public void shouldCreateValidTvShow() {
-    // make this larger than an int so that we're sure un-/marshaling works
-    doAnswer((invocation) -> {
-      TvShow arg = invocation.getArgument(0);
-      arg.setId((long) Integer.MAX_VALUE + 1);
-      return arg;
-    }).when(tvShowService).create(any());
-
-    given().contentType(ContentType.JSON)
-        .body("{ \"title\": \"my_tvShow\" }")
-        .when()
-        .post()
-        .then()
-        .statusCode(200)
-        .body("id", equalTo(2147483648L))
-        .body("title", equalTo("my_tvShow"));
   }
 
   @Test
@@ -126,27 +145,75 @@ public class TvShowResourceTest {
 
   @Test
   public void shouldDeleteAllTvShows() {
+
+    TvShow tvShow = new TvShow(null, "This is a show", "Comedy");
+
+    given()
+        .body(tvShow)
+        .contentType(ContentType.JSON)
+        .accept(ContentType.JSON)
+        .when()
+        .post()
+        .then()
+        .statusCode(200)
+        .contentType(ContentType.JSON)
+        .body("title", is(tvShow.getTitle()));
+
+    given()
+        .when()
+        .get()
+        .then()
+        .statusCode(200)
+        .contentType(ContentType.JSON)
+        .body("$.size()", is(1));
+
     given().contentType(ContentType.JSON)
         .when()
         .delete()
         .then()
         .statusCode(204);
 
-    verify(tvShowService).deleteAll();
+    given()
+        .when()
+        .get()
+        .then()
+        .statusCode(200)
+        .contentType(ContentType.JSON)
+        .body("$.size()", is(0));
   }
 
   @Test
   public void shouldDeleteIndividualTvShow() {
-    ArgumentCaptor<Long> captor = ArgumentCaptor.forClass(Long.class);
-    doNothing().when(tvShowService).deleteById(captor.capture());
+    TvShow actual = given()
+        .body(new TvShow(null, "This is a show", "Comedy"))
+        .contentType(ContentType.JSON)
+        .accept(ContentType.JSON)
+        .when()
+        .post()
+        .then()
+        .statusCode(200)
+        .contentType(ContentType.JSON)
+        .extract().body().as(TvShow.class);
+
+    given()
+        .when()
+        .get("")
+        .then()
+        .statusCode(200)
+        .contentType(ContentType.JSON)
+        .body("$.size()", is(1));
 
     given().contentType(ContentType.JSON)
         .when()
-        .delete("123")
+        .delete("" + actual.getId())
         .then()
         .statusCode(204);
 
-    assertThat(captor.getValue()).isEqualTo(123L);
+    given().contentType(ContentType.JSON)
+        .when()
+        .get("" + actual.getId()) // this show does not exist
+        .then()
+        .statusCode(404);
   }
 
 }
