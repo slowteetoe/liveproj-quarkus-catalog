@@ -9,12 +9,14 @@ import javax.validation.constraints.NotNull;
 import javax.validation.groups.ConvertGroup;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,4 +68,22 @@ public class TvShowResource {
     tvShowService.deleteById(id);
   }
 
+  @GET
+  @Path("/search/{title}")
+  public TvShow getOneByTitle(@PathParam("title") String title) {
+    TvShow entity = TvShow.findByTitle(title);
+    if (entity == null) {
+      throw new NotFoundException("Entity does not exist.");
+    }
+    return entity;
+  }
+
+  @GET
+  @Path("/categories/{category}")
+  public List<TvShow> getAllByCategory(
+      @PathParam("category") String category,
+      @DefaultValue("1") @QueryParam(value = "page") int pageIndex,
+      @DefaultValue("10") @QueryParam(value = "size") int pageSize) {
+    return TvShow.findByCategoryIgnoreCase(category, pageIndex, pageSize);
+  }
 }

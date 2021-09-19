@@ -216,4 +216,61 @@ public class TvShowResourceTest {
         .statusCode(404);
   }
 
+
+  @Test
+  public void shouldFindTvShowByTitle() {
+    given()
+        .body(new TvShow(null, "Special Title", null))
+        .contentType(ContentType.JSON)
+        .accept(ContentType.JSON)
+        .when()
+        .post()
+        .then()
+        .statusCode(200)
+        .contentType(ContentType.JSON)
+        .body("title", is("Special Title"));
+
+    given()
+        .when()
+        .get("/search/{title}", "Special Title")
+        .then()
+        .statusCode(200)
+        .contentType(ContentType.JSON)
+        .body("title", is("Special Title"));
+  }
+
+  @Test
+  public void shouldListTvShowsByCategory() {
+    for (int i = 0; i < 100; i++) {
+      String category = i % 2 == 0 ? "Comedy" : "Drama";
+      String title = "Show Number " + i;
+
+      given()
+          .body(new TvShow(null, title, category))
+          .contentType(ContentType.JSON)
+          .accept(ContentType.JSON)
+          .when()
+          .post()
+          .then()
+          .statusCode(200)
+          .contentType(ContentType.JSON)
+          .body("title", is(title));
+    }
+
+    int pageIndex = 2;
+    int pageSize = 20;
+    List<TvShow> result = given()
+        .when()
+        .get("/categories/{category}?page={pageIndex}&size={pageSize}", "Comedy", pageIndex,
+            pageSize)
+        .then()
+        .statusCode(200)
+        .contentType(ContentType.JSON)
+        .extract().jsonPath().getList(".", TvShow.class);
+
+    // the page index is apparently zero-based, so the 3rd page should have only 10 results since
+    // there are only 50 entries total
+    assertThat(result).hasSize(10);
+    assertThat(result).extracting("category").containsOnly("Comedy");
+  }
 }

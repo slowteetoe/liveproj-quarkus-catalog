@@ -8,7 +8,7 @@ import javax.enterprise.context.ApplicationScoped;
 public class TvShowService {
 
   public List<TvShow> getAll() {
-    return TvShow.listAll();
+    return TvShow.findAllOrderByTitle();
   }
 
   public TvShow findById(Long id) {

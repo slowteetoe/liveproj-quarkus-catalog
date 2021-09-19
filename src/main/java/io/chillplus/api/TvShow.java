@@ -3,6 +3,8 @@ package io.chillplus.api;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.chillplus.ValidationGroups;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import io.quarkus.panache.common.Parameters;
+import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -62,4 +64,20 @@ public class TvShow extends PanacheEntityBase {
     this.category = category;
   }
 
+  public static List<TvShow> findAllOrderByTitle() {
+    return list("order by title DESC");
+  }
+
+  public static TvShow findByTitle(String title) {
+    return find("title", title).firstResult();
+  }
+
+  public static List<TvShow> findByCategoryIgnoreCase(
+      String category,
+      int pageIndex,
+      int pageSize) {
+    return find("LOWER(category) = LOWER(:category)", Parameters.with("category", category))
+        .page(pageIndex, pageSize)
+        .list();
+  }
 }
